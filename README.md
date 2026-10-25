@@ -1,59 +1,30 @@
 # BOM SMT Comparator
 
-Browser tool that checks an SMT setup sheet against an engineering BOM. Files stay on your PC; nothing is uploaded to a server.
+Browser tool that checks an SMT setup sheet against an engineering BOM. It is HTML and JavaScript only. Files stay on your PC; nothing is uploaded to a server.
 
 There are two copies of the same app:
 
 | Path | What it is |
 | --- | --- |
 | `BOM_SMT_Comparator.html` | Single file. Double-click to open in Chrome or Edge. |
-| `web/` | Same app split into HTML, CSS, and JS. Run with a local web server. |
+| `web/` | Same app split into HTML, CSS, and JS. Open `web/index.html` in Chrome or Edge. |
 
 ## What you need
 
 - Chrome or Edge
-- For the `web/` version: [Python 3](https://www.python.org/downloads/) (used only to serve the files)
 
 Supported inputs:
 
 - **SMT setup sheet:** `.txt`, `.log`, or a text-based `.pdf` (not a scanned image)
 - **BOM:** `.xlsx`, `.xls`, or `.xlsm`
 
-## Option A — single HTML file (easiest)
+## How to run
 
 1. Download or clone this repo.
-2. Double-click `BOM_SMT_Comparator.html`.
-3. It opens in your browser with a built-in sample comparison.
+2. Double-click `BOM_SMT_Comparator.html`, **or** open `web/index.html` in Chrome or Edge.
+3. The app loads with a built-in sample comparison.
 
 To pin it to the Windows desktop: right-click `BOM_SMT_Comparator.html` → **Show more options** → **Send to** → **Desktop (create shortcut)**.
-
-## Option B — split `web/` app
-
-From PowerShell:
-
-```powershell
-cd path\to\BomCompare_Javascript\web
-python -m http.server 8765
-```
-
-Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/) in Chrome or Edge.
-
-Leave the Command Prompt window open while you use the tool. Close it when you are done.
-
-Do not double-click `web/index.html`. Opening it as a file can stop PDF setup sheets from loading.
-
-### Windows desktop shortcut for `web/`
-
-Create `BOM SMT Comparator.bat` on your Desktop with:
-
-```bat
-@echo off
-cd /d "C:\path\to\BomCompare_Javascript\web"
-start "" http://127.0.0.1:8765/
-python -m http.server 8765
-```
-
-Change the `cd` path to your clone location. Double-click the `.bat` to start the server and open the browser.
 
 ## How to compare files
 
