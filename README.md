@@ -67,6 +67,8 @@ Supported inputs:
 
 ## How to run
 
+If you **downloaded a ZIP on Windows**, follow **[INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)** or double-click **`Open.bat`**.
+
 1. Download or clone this repo.
 2. Double-click `BOM_SMT_Comparator.html`, **or** open `web/index.html` in Chrome or Edge.
 3. The app loads with a built-in sample comparison.
