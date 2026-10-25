@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BOM SMT Comparator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>BOM<span class="sep">⇄</span>SMT Comparator</h1>
+    <p>Check that the parts loaded on the line match the engineering BOM.</p>
+    <span class="ver">v1.0 · runs in your browser, files stay on this PC</span>
+  </header>
+
+  <div class="grid">
+    <!-- ============ Setup ============ -->
+    <aside class="setup">
+      <section class="card">
+        <h2><span class="step">1</span>Input files</h2>
+        <label class="drop" id="smtDrop" for="smtFile">
+          <span class="ico" id="smtIco">TXT</span>
+          <span class="lbl">SMT setup sheet</span>
+          <span class="name" id="smtName">Click or drop a .txt, .log or .pdf</span>
+          <input type="file" id="smtFile" accept=".txt,.log,.pdf">
+        </label>
+        <label class="drop" id="bomDrop" for="bomFile">
+          <span class="ico" id="bomIco">XLS</span>
+          <span class="lbl">Bill of materials</span>
+          <span class="name" id="bomName">Click or drop a .xlsx or .xls</span>
+          <input type="file" id="bomFile" accept=".xlsx,.xls,.xlsm">
+        </label>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">2</span>BOM columns</h2>
+        <div class="form">
+          <label for="sheetSel">Sheet</label>
+          <select id="sheetSel" class="field"></select>
+          <label for="headerRow">Header row</label>
+          <input id="headerRow" class="field mono" type="number" min="0" step="1" value="0">
+          <span class="hint">0 = detect automatically</span>
+          <label for="refCol">Ref. designators <b>*</b></label>
+          <input id="refCol" class="field" list="colList" autocomplete="off" placeholder="Header, number or letter">
+          <label for="mpnCol">MPN <b>*</b></label>
+          <input id="mpnCol" class="field" list="colList" autocomplete="off" placeholder="Header, number or letter">
+          <label for="descCol">Description</label>
+          <input id="descCol" class="field" list="colListDesc" autocomplete="off" placeholder="Optional">
+        </div>
+        <datalist id="colList"></datalist>
+        <datalist id="colListDesc"></datalist>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">3</span>Options</h2>
+        <div class="form">
+          <label for="prefixes">SMT prefixes</label>
+          <input id="prefixes" class="field mono">
+          <label for="ignore">Ignore prefixes</label>
+          <input id="ignore" class="field mono" placeholder="e.g. J, TP, MH">
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="learn" checked> Also scan for prefixes used in the BOM</label>
+          <label><input type="checkbox" id="checkMpn" checked> Check MPN association (mismatch detection)</label>
+          <label><input type="checkbox" id="excludeDnp" checked> Exclude BOM rows marked DNP / not fitted</label>
+        </div>
+      </section>
+
+      <button class="go" id="goBtn" type="button">Compare files</button>
+      <div class="progress" id="prog" hidden><i id="progBar"></i></div>
+      <div class="pmsg" id="progMsg" aria-live="polite"></div>
+    </aside>
+
+    <!-- ============ Results ============ -->
+    <main class="results">
+      <div class="banner" id="sampleBanner" hidden>
+        <span><b>Sample data.</b> This is a demo comparison of a built-in example board. Choose your own files on the left and press Compare.</span>
+      </div>
+
+      <div class="stats" id="stats">
+        <div class="stat"><div class="n" id="sBom">–</div><div class="k">In BOM</div></div>
+        <div class="stat"><div class="n" id="sSmt">–</div><div class="k">On setup sheet</div></div>
+        <div class="stat"><div class="n" id="sCommon">–</div><div class="k">In both</div></div>
+        <div class="stat good"><div class="n" id="sVer">–</div><div class="k">MPN verified</div></div>
+        <div class="stat"><div class="n" id="sDnp">–</div><div class="k">DNP excluded</div></div>
+        <div class="stat bad"><div class="n" id="sTotal">–</div><div class="k">Discrepancies</div></div>
+      </div>
+
+      <div class="chips" id="chips"></div>
+
+      <div class="toolbar">
+        <div class="search">
+          <svg viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+          <input id="search" class="field" type="search" placeholder="Search designators, MPNs, notes… (space = several terms, e.g. C1 D2 U3)">
+        </div>
+        <select id="typeSel" class="field" style="width:auto">
+          <option value="">All types</option>
+        </select>
+        <button class="btn primary" id="exportBtn" type="button" disabled>Export to Excel</button>
+      </div>
+
+      <div class="tablebox">
+        <table id="tbl">
+          <thead><tr>
+            <th data-k="ref" aria-sort="ascending">Reference Designator</th>
+            <th data-k="type">Discrepancy Type</th>
+            <th data-k="bomMpn">BOM MPN</th>
+            <th data-k="smtMpn">SMT MPN</th>
+            <th data-k="notes">Notes</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty"><strong>No comparison yet</strong>Choose a setup sheet and a BOM, then press Compare files.</div>
+      </div>
+      <div class="foot"><span id="count"></span><span id="srcInfo"></span></div>
+    </main>
+  </div>
+</div>
+
+<dialog id="dlg"><form method="dialog" class="dlg" id="dlgBody">
+  <h3><span class="badge" id="dlgBadge">!</span><span id="dlgTitle"></span></h3>
+  <p class="msg" id="dlgMsg"></p>
+  <details id="dlgDetails" hidden><summary>Show details</summary><pre id="dlgDetailText"></pre></details>
+  <div class="acts" id="dlgActs"></div>
+</form></dialog>
+
+<script src="vendor/xlsx.js"></script>
+<script src="vendor/exceljs.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.worker.min.js"></script>
+<script>
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+}
+</script>
+<script src="js/core.js"></script>
+<script src="js/sample.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
