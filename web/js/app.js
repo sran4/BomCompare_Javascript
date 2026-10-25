@@ -24,9 +24,28 @@
   $("learn").checked = store.get("learn", true);
   $("checkMpn").checked = store.get("checkMpn", true);
   $("excludeDnp").checked = store.get("excludeDnp", true);
+  $("colMode").checked = store.get("colMode", false);
+  $("smtRefCol").value = store.get("smtRefCol", 6);
+  $("smtMpnCol").value = store.get("smtMpnCol", 3);
+  function syncColumnMode() {
+    const on = $("colMode").checked;
+    $("smtRefCol").disabled = !on;
+    $("smtMpnCol").disabled = !on;
+  }
+  function applyTheme(dark) {
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    $("themeBtn").textContent = dark ? "Light mode" : "Dark mode";
+    store.set("theme", dark ? "dark" : "light");
+  }
+  applyTheme(store.get("theme", "light") === "dark");
+  $("themeBtn").addEventListener("click", () => applyTheme(document.documentElement.getAttribute("data-theme") !== "dark"));
+  $("colMode").addEventListener("change", syncColumnMode);
+  syncColumnMode();
   function saveSettings() {
     store.set("prefixes", $("prefixes").value); store.set("ignore", $("ignore").value);
     store.set("learn", $("learn").checked); store.set("checkMpn", $("checkMpn").checked); store.set("excludeDnp", $("excludeDnp").checked);
+    store.set("colMode", $("colMode").checked); store.set("smtRefCol", parseInt($("smtRefCol").value, 10) || 6);
+    store.set("smtMpnCol", parseInt($("smtMpnCol").value, 10) || 0);
   }
 
   /* ------------------------------------------------------------ dialog */
@@ -201,6 +220,9 @@
       headerRow: hr, refCol: $("refCol").value, mpnCol: $("mpnCol").value, descCol: $("descCol").value,
       prefixes, ignorePrefixes: new Set(C.parsePrefixList($("ignore").value)),
       learnPrefixes: $("learn").checked, checkMpn: $("checkMpn").checked, excludeDnp: $("excludeDnp").checked,
+      smtColumnMode: $("colMode").checked,
+      smtRefCol: parseInt($("smtRefCol").value, 10) || 6,
+      smtMpnCol: parseInt($("smtMpnCol").value, 10) || 0,
     };
   }
 
@@ -221,12 +243,8 @@
       $("sampleBanner").hidden = !state.sample;
       render();
       setMsg(`Done: ${res.stats.total} discrepancies (BOM header row ${res.headerRow}).`);
-      if (!silent) {
-        if (res.warnings.length)
-          await showDialog("warn", "Finished with warnings", "The comparison finished, but some BOM data could not be read as designators. Open the details to review.", res.warnings.join("\n\n"));
-        else if (res.stats.total === 0)
-          await showDialog("info", "No discrepancies", "The BOM and the SMT setup sheet match.");
-      }
+      if (!silent && res.warnings.length)
+        await showDialog("warn", "Finished with warnings", "The comparison finished, but some BOM data could not be read as designators. Open the details to review.", res.warnings.join("\n\n"));
     } catch (e) {
       setMsg("Comparison failed.");
       errorBox(e);
@@ -264,13 +282,27 @@
     $("sTotal").parentElement.classList.toggle("bad", st.total > 0);
     $("sTotal").parentElement.classList.toggle("good", st.total === 0);
 
+    const sel = $("typeSel");
+    const keep = state.filterType && st[state.filterType] ? state.filterType : "";
+    state.filterType = keep;
+    sel.innerHTML = "";
+    sel.add(new Option("All types", ""));
+    C.ALL_TYPES.filter((t) => st[t]).forEach((t) => sel.add(new Option(t, t)));
+    sel.value = keep;
+
     const chips = $("chips"); chips.innerHTML = "";
+    const allChip = document.createElement("button");
+    allChip.type = "button"; allChip.className = "chip";
+    allChip.setAttribute("aria-pressed", String(!state.filterType));
+    allChip.textContent = "All";
+    allChip.addEventListener("click", () => { state.filterType = ""; $("typeSel").value = ""; render(); });
+    chips.appendChild(allChip);
     C.ALL_TYPES.filter((t) => st[t]).forEach((t) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "chip " + TYPE_CLASS[t];
       b.setAttribute("aria-pressed", String(state.filterType === t));
       b.innerHTML = `<span class="dot"></span>${escHtml(t)} <span class="c">${st[t]}</span>`;
-      b.addEventListener("click", () => { state.filterType = state.filterType === t ? "" : t; $("typeSel").value = state.filterType; render(); });
+      b.addEventListener("click", () => { state.filterType = t; $("typeSel").value = t; render(); });
       chips.appendChild(b);
     });
 
@@ -299,8 +331,13 @@
     $("exportBtn").disabled = st.total === 0;
   }
 
-  C.ALL_TYPES.forEach((t) => $("typeSel").add(new Option(t, t)));
   $("typeSel").addEventListener("change", () => { state.filterType = $("typeSel").value; if (state.result) render(); });
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); $("goBtn").click(); }
+    if ((e.ctrlKey || e.metaKey) && (e.key === "e" || e.key === "E")) {
+      if (!$("exportBtn").disabled) { e.preventDefault(); exportExcel(); }
+    }
+  });
   $("search").addEventListener("input", () => {
     state.terms = $("search").value.toLowerCase().split(/[\s,]+/).filter(Boolean);
     if (state.result) render();
@@ -322,6 +359,7 @@
       if (choice === "all") rows = state.result.rows.slice().sort((a, b) => C.naturalCompare(a.ref, b.ref)); else scope = "filtered";
     }
     try {
+      if (!bindExcelJS()) throw new Error("ExcelJS did not load. Reload the page and try again.");
       const st = state.result.stats;
       const wb = new ExcelJS.Workbook();
       wb.creator = "BOM SMT Comparator"; wb.created = new Date();
@@ -394,9 +432,19 @@
     compare(true);
   }
 
-  if (!window.XLSX || !window.ExcelJS) {
-    showDialog("error", "Libraries failed to load", "The spreadsheet components did not load. Re-download the file and open it again in Chrome or Edge.");
-  } else {
-    loadSample();
+  function bindExcelJS() {
+    if (window.ExcelJS) return true;
+    if (typeof ExcelJS !== "undefined") { window.ExcelJS = ExcelJS; return true; }
+    if (typeof module !== "undefined" && module.exports && module.exports.Workbook) {
+      window.ExcelJS = module.exports; return true;
+    }
+    return false;
   }
+  function startApp(tries) {
+    bindExcelJS();
+    if (window.XLSX) { loadSample(); return; }
+    if (tries < 25) { setTimeout(() => startApp(tries + 1), 120); return; }
+    showDialog("error", "Libraries failed to load", "The spreadsheet components did not load. Re-download the file and open it again in Chrome or Edge.");
+  }
+  startApp(0);
 })();

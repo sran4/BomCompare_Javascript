@@ -14,7 +14,10 @@
   <header class="top">
     <h1>BOM<span class="sep">⇄</span>SMT Comparator</h1>
     <p>Check that the parts loaded on the line match the engineering BOM.</p>
-    <span class="ver">v1.0 · runs in your browser, files stay on this PC</span>
+    <div class="actions">
+      <button class="theme-btn" id="themeBtn" type="button" title="Toggle a darker shop-floor theme">Dark mode</button>
+      <span class="ver">v1.1 · runs in your browser, files stay on this PC</span>
+    </div>
   </header>
 
   <div class="grid">
@@ -67,10 +70,18 @@
           <label><input type="checkbox" id="learn" checked> Also scan for prefixes used in the BOM</label>
           <label><input type="checkbox" id="checkMpn" checked> Check MPN association (mismatch detection)</label>
           <label><input type="checkbox" id="excludeDnp" checked> Exclude BOM rows marked DNP / not fitted</label>
+          <label><input type="checkbox" id="colMode"> Setup sheet is columnar (tab / 2+ spaces / |)</label>
+        </div>
+        <div class="form" style="margin-top:10px">
+          <label for="smtRefCol">Setup RefDes column</label>
+          <input id="smtRefCol" class="field mono col-fields" type="number" min="1" max="40" value="6" disabled>
+          <label for="smtMpnCol">Setup MPN column</label>
+          <input id="smtMpnCol" class="field mono col-fields" type="number" min="0" max="40" value="3" disabled>
         </div>
       </section>
 
-      <button class="go" id="goBtn" type="button">Compare files</button>
+      <button class="go" id="goBtn" type="button" title="Ctrl+Enter">Compare files</button>
+      <div class="hint-line">PDF must be selectable text, not a scan. Header 0 = auto-detect. Ctrl+Enter compares · Ctrl+E exports.</div>
       <div class="progress" id="prog" hidden><i id="progBar"></i></div>
       <div class="pmsg" id="progMsg" aria-live="polite"></div>
     </aside>
@@ -100,7 +111,7 @@
         <select id="typeSel" class="field" style="width:auto">
           <option value="">All types</option>
         </select>
-        <button class="btn primary" id="exportBtn" type="button" disabled>Export to Excel</button>
+        <button class="btn primary" id="exportBtn" type="button" disabled title="Ctrl+E">Export to Excel</button>
       </div>
 
       <div class="tablebox">
@@ -128,8 +139,8 @@
   <div class="acts" id="dlgActs"></div>
 </form></dialog>
 
-<script src="vendor/xlsx.js"></script>
 <script src="vendor/exceljs.min.js"></script>
+<script src="vendor/xlsx.js"></script>
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
 <script>

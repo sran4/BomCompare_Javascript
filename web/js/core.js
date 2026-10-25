@@ -308,6 +308,39 @@
     return data;
   }
 
+  function parseSmtColumns(lines, scanner, bomNorms, refCol, mpnCol) {
+    if (refCol < 1) throw new AppError("Setup RefDes column must be 1 or greater.", "Configuration Error");
+    const data = new Map();
+    let lastMpn = null, lastCtx = "", lastIdx = -999;
+    lines.forEach(({ loc, text }, idx) => {
+      const raw = String(text).trim();
+      if (!raw) return;
+      const parts = raw.split(/\t+|\s{2,}|\|/);
+      if (refCol > parts.length) return;
+      const refs = unique(scanner.find(parts[refCol - 1].toUpperCase()));
+      if (!refs.length) return;
+      let mpn = "";
+      if (mpnCol >= 1 && mpnCol <= parts.length) {
+        const cand = parts[mpnCol - 1].trim();
+        if (cand && !scanner.find(cand.toUpperCase()).length) mpn = cand;
+      }
+      if (!mpn) {
+        const tokens = raw.toUpperCase().split(SMT_TOKEN_SPLIT_RE).map((t) => t.replace(/^["'()[\]{}:]+|["'()[\]{}:]+$/g, "")).filter(Boolean);
+        mpn = scanner.guessMpn(tokens, bomNorms) || "";
+      }
+      let inherited = false, ctx = raw;
+      if (mpn) { lastMpn = mpn; lastCtx = ctx; lastIdx = idx; }
+      else if (lastMpn && idx - lastIdx <= 3) {
+        mpn = lastMpn; inherited = true; ctx = `${lastCtx}  ⏎  ${ctx}`; lastIdx = idx;
+      }
+      for (const r of refs) {
+        if (!data.has(r)) data.set(r, []);
+        data.get(r).push({ ref: r, mpn: mpn || "", location: loc, context: ctx, inherited });
+      }
+    });
+    return data;
+  }
+
   /* ------------------------------------------------------------- comparison */
   function compareData(bom, smt, scanPrefixes, opts) {
     const ignore = new Set([...opts.ignorePrefixes].map((p) => p.toUpperCase()));
@@ -384,11 +417,17 @@
     const scanner = new SmtScanner(prefixes);
     const bomNorms = new Set();
     for (const es of bom.entries.values()) for (const e of es) { const n = normalizeMpn(e.mpn); if (n.length >= 4) bomNorms.add(n); }
-    const smt = parseSmt(lines, scanner, bomNorms);
-    if (!smt.size)
+    const smt = opts.smtColumnMode
+      ? parseSmtColumns(lines, scanner, bomNorms, opts.smtRefCol || 6, opts.smtMpnCol || 0)
+      : parseSmt(lines, scanner, bomNorms);
+    if (!smt.size) {
+      const extra = opts.smtColumnMode
+        ? `\n\nColumn mode is on (designators in column ${opts.smtRefCol}, MPN in column ${opts.smtMpnCol}). Turn it off for free-form sheets, or change the column numbers.`
+        : "";
       throw new AppError(
-        "No reference designators were found in the SMT setup sheet.\n\nCheck that the correct file was selected and that the designator prefixes (e.g. R, C, U) match the ones used on the sheet.",
+        "No reference designators were found in the SMT setup sheet.\n\nCheck that the correct file was selected and that the designator prefixes (e.g. R, C, U) match the ones used on the sheet." + extra,
         "Parsing Error");
+    }
     const { rows, stats } = compareData(bom, smt, scanner.prefixes, opts);
     const warnings = [];
     if (bom.invalidTokens.length) {
@@ -445,7 +484,7 @@
     DEFAULT_PREFIXES, NONE_OPTION, T, ALL_TYPES, AppError,
     cellText, normalizeMpn, refPrefix, naturalCompare, colLetter, parsePrefixList,
     splitBomDesignators, expandRange, guessColumn, detectHeaderRow, peekHeaders, resolveColumn,
-    loadBom, SmtScanner, parseSmt, compareData, runComparison, decodeText, pdfItemsToLines,
+    loadBom, SmtScanner, parseSmt, parseSmtColumns, compareData, runComparison, decodeText, pdfItemsToLines,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = root.BomCore;
 })(typeof window !== "undefined" ? window : globalThis);

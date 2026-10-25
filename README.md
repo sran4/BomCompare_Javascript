@@ -6,6 +6,10 @@ Browser tool that checks an SMT setup sheet against an engineering BOM. It is HT
 
 ![Discrepancy results](docs/app-results.png)
 
+![Dark mode](docs/app-dark.png)
+
+The layout matches the Python desktop app: blue shop-floor theme, **Dark mode**, clickable type chips, and an optional columnar setup-sheet mode. **Ctrl+Enter** compares; **Ctrl+E** exports.
+
 There are two copies of the same app:
 
 | Path | What it is |
@@ -37,8 +41,8 @@ To pin it to the Windows desktop: right-click `BOM_SMT_Comparator.html` → **Sh
 3. Drop or click to choose the **BOM Excel** file.
 4. Check **Sheet**, **Header row**, **Ref. designators**, and **MPN**. Header row `0` means auto-detect.
 5. Adjust prefixes if your designators are not the usual `R`, `C`, `U`, and so on.
-6. Click **Compare files**.
-7. Filter or search the discrepancy table. Click **Export to Excel** to save a report.
+6. Click **Compare files** (or press Ctrl+Enter). Use **Dark mode** if you prefer the shop-floor theme.
+7. Filter or search the discrepancy table, or click a colored chip. Click **Export to Excel** (or press Ctrl+E) to save a report. For machine dumps with a fixed designator column, turn on **Setup sheet is columnar**.
 
 Discrepancy types:
 
