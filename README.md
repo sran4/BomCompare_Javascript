@@ -2,6 +2,10 @@
 
 Browser tool that checks an SMT setup sheet against an engineering BOM. It is HTML and JavaScript only. Files stay on your PC; nothing is uploaded to a server.
 
+![BOM SMT Comparator overview](docs/app-overview.png)
+
+![Discrepancy results](docs/app-results.png)
+
 There are two copies of the same app:
 
 | Path | What it is |
