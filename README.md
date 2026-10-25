@@ -17,6 +17,45 @@ There are two copies of the same app:
 | `BOM_SMT_Comparator.html` | Single file. Double-click to open in Chrome or Edge. |
 | `web/` | Same app split into HTML, CSS, and JS. Open `web/index.html` in Chrome or Edge. |
 
+## Python vs JavaScript
+
+There is a matching desktop app: [BomCompare_Python](https://github.com/sran4/BomCompare_Python). Both use the same comparison rules (missing, MPN mismatch, duplicates, DNP). Pick one:
+
+| | JavaScript (this repo) | Python |
+| --- | --- | --- |
+| **Best when** | Sharing a file or a quick look with no install | Daily use on a line PC you control |
+| **How you run it** | Double-click `BOM_SMT_Comparator.html` in Chrome or Edge | `python bom_smt_comparator.py` after a one-time venv |
+| **Install** | None | Python 3.12 + `pip install -r requirements.txt` |
+| **Sample on start** | Yes — built-in demo with a “Sample data” banner | No — you choose files |
+| **PDF / Excel** | PDF.js, SheetJS, ExcelJS in the page | pdfplumber (and pypdf fallback), pandas/openpyxl |
+| **Settings** | Remembered in the browser (localStorage) | Remembered in Windows (window size, prefixes, dark mode) |
+
+**JavaScript — pros**
+
+- Zero install; one HTML file or the `web/` folder.
+- Opens with a sample so new users see chips, filters, and a real table immediately.
+- Easy to put on a share or GitHub for anyone with a browser.
+
+**JavaScript — cons**
+
+- The single-file HTML is very large (libraries are inlined).
+- Relies on the browser; a blocked or slow script load can delay the first compare.
+- Weaker fit as the always-on tool on an SMT station.
+
+**Python — pros**
+
+- Stays up as a normal Windows window (drop files, shortcuts, export).
+- Header auto-detect and PDF text extract were solid on the shared test BOMs.
+- No wait for large in-page spreadsheet libraries.
+
+**Python — cons**
+
+- Must install Python and packages on each PC.
+- No demo comparison until you pick files.
+- Not something you email as a single double-click file.
+
+Use **this JavaScript app** to try the tool or send it to someone without Python. Use **Python** on the machine that compares production BOMs.
+
 ## What you need
 
 - Chrome or Edge
